@@ -209,6 +209,24 @@ function clearDrawing() {
   currentStroke = null;
 }
 
+// Re-render every committed stroke onto the compose canvas. Used by undo.
+function redrawAllStrokes() {
+  ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  for (const s of messageStrokes) drawStroke(ctx, s);
+}
+
+// Undo (Cmd/Ctrl+Z): pop the most recent stroke, re-render. Falls through to
+// the textarea's native undo when there are no strokes left to remove.
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'z' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+    if (messageStrokes.length > 0) {
+      e.preventDefault();
+      messageStrokes.pop();
+      redrawAllStrokes();
+    }
+  }
+});
+
 function flashCompose() {
   composeArea.classList.add('compose-area--flash');
   setTimeout(() => composeArea.classList.remove('compose-area--flash'), 240);
