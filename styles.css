@@ -219,9 +219,10 @@ body {
   border-right: none;
   border-bottom: none;
   border-radius: 0;
-  /* width / height are synced to the send button at runtime */
-  width: var(--corner-btn-w, 80px);
-  height: var(--corner-btn-h, 30px);
+  /* Same proportions as the send button (16.67% × 33.33% of bubble).
+     Whatever the sender's button covered, the play button covers too. */
+  width:  calc(80 / 480 * 100%);
+  height: calc(30 / 90  * 100%);
   padding: 0;
   font: inherit;
   font-size: 13px;
@@ -375,10 +376,11 @@ body {
   position: absolute;
   bottom: 0;
   right: 0;
-  /* Fixed pixel dimensions so the button (and the corresponding
-     play button on every message) is identical across all devices. */
-  width: 80px;
-  height: 30px;
+  /* Proportional dimensions (16.67% × 33.33% of the 480×90 compose area).
+     This way a drawing "under the button" on one device ends up under
+     the play button on every other device, regardless of viewport size. */
+  width:  calc(80 / 480 * 100%);
+  height: calc(30 / 90  * 100%);
   padding: 0;
   background: var(--surface-3);
   color: var(--mint);

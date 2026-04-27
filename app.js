@@ -587,21 +587,5 @@ if (window.visualViewport) {
 window.addEventListener('resize', updateAppHeight);
 window.addEventListener('orientationchange', updateAppHeight);
 
-// ------- Sync corner-button size -------
-// The slideshow play button on each message mirrors the send button's exact
-// dimensions for visual symmetry. We measure once after layout, then again
-// on resize (in case the compose area's width changed).
-function syncCornerBtnSize() {
-  // Send button is now a fixed 80×30 across all devices, but we still
-  // measure here in case the design changes — keeps the play button in
-  // lockstep with whatever the send button actually is.
-  const sb = document.getElementById('sendBtn');
-  if (!sb) return;
-  const r = sb.getBoundingClientRect();
-  if (r.width === 0) return;
-  document.documentElement.style.setProperty('--corner-btn-w', r.width + 'px');
-  document.documentElement.style.setProperty('--corner-btn-h', r.height + 'px');
-}
-requestAnimationFrame(syncCornerBtnSize);
-window.addEventListener('load', syncCornerBtnSize);
-window.addEventListener('resize', () => requestAnimationFrame(syncCornerBtnSize));
+// (Send/play button sizing is now pure CSS — proportional to the compose
+// area / message bubble. No JS sync needed.)
