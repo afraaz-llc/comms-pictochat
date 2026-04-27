@@ -446,6 +446,23 @@ window       .addEventListener('focus', () => setTimeout(ensureFocus, 0));
 setTimeout(ensureFocus, 80);
 sizeCanvas();
 
+// ------- Visual viewport tracking (mobile keyboard handling) -------
+// iOS Safari doesn't reliably update 100dvh when the on-screen keyboard
+// opens, so we track window.visualViewport.height directly and expose it
+// as --app-h. The mobile @media rule uses this var for the app shell's
+// height — when the keyboard slides up, the app shrinks to fit immediately.
+function updateAppHeight() {
+  const h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+  document.documentElement.style.setProperty('--app-h', h + 'px');
+}
+updateAppHeight();
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', updateAppHeight);
+  window.visualViewport.addEventListener('scroll', updateAppHeight);
+}
+window.addEventListener('resize', updateAppHeight);
+window.addEventListener('orientationchange', updateAppHeight);
+
 // ------- Sync corner-button size -------
 // The slideshow play button on each message mirrors the send button's exact
 // dimensions for visual symmetry. We measure once after layout, then again

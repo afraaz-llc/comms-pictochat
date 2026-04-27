@@ -56,15 +56,17 @@ body {
 @media (max-width: 600px) {
   .comms-app {
     width: 100%;
-    height: 100dvh;
+    /* --app-h is set in JS to window.visualViewport.height so the layout
+       shrinks the moment the keyboard opens — 100dvh doesn't always update
+       in iOS Safari when the keyboard appears. */
+    height: var(--app-h, 100dvh);
     margin: 0;
     padding: 8px;
     border-radius: 0;
     border: none;
   }
-  /* iOS auto-zooms text inputs with font-size < 16px on focus. Forcing 16px
-     keeps the page at zoom level 1 — feels like a native app instead of a
-     pinch-zoomed webpage. */
+  /* Belt-and-suspenders against iOS auto-zoom on input focus
+     (maximum-scale=1 in the viewport meta is the primary defense). */
   #messageInput,
   .name-label input {
     font-size: 16px;
