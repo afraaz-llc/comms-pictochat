@@ -382,7 +382,10 @@ body {
   height: calc(30 / 90  * 100%);
   padding: 0;
   background: var(--surface-3);
-  color: var(--mint);
+  /* Default state: no peers connected — text is muted to signal that
+     a sent message will only appear locally. .has-peers (set in JS when
+     at least one peer is in the room) flips this to the mint accent. */
+  color: var(--text-mute);
   border: 1px solid var(--border);
   border-right: none;
   border-bottom: none;
@@ -397,6 +400,9 @@ body {
   gap: 6px;
   letter-spacing: 0.3px;
   z-index: 2;
+}
+.has-peers .send-btn {
+  color: var(--mint);
 }
 .send-btn:hover {
   background: var(--surface-3h);

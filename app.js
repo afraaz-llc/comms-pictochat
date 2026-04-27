@@ -545,8 +545,22 @@ let broadcastMessage = null;
     const room = joinRoom({ appId: 'comms-pictochat' }, roomKey);
     window._commsRoom = room; // exposed for debugging
 
-    room.onPeerJoin((peerId) => console.log('[comms] peer joined:', peerId));
-    room.onPeerLeave((peerId) => console.log('[comms] peer left:', peerId));
+    // Track connection state on the document root so the send button can
+    // visually distinguish "alone" (muted) from "has peers" (mint accent).
+    // No peer count exposed — just a binary "is anyone listening".
+    function updateConnectionState() {
+      const hasPeers = Object.keys(room.getPeers()).length > 0;
+      document.documentElement.classList.toggle('has-peers', hasPeers);
+    }
+    updateConnectionState();
+    room.onPeerJoin((peerId) => {
+      console.log('[comms] peer joined:', peerId);
+      updateConnectionState();
+    });
+    room.onPeerLeave((peerId) => {
+      console.log('[comms] peer left:', peerId);
+      updateConnectionState();
+    });
 
     // Wire a typed action channel for messages. makeAction returns
     // [send, receive]. We just use one channel for everything for now.
