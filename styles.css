@@ -61,17 +61,16 @@ body {
 /* ---------- mobile / small viewport ---------- */
 @media (max-width: 600px) {
   .comms-app {
-    /* Pin the app to the visible viewport. position: fixed prevents iOS
-       from "scrolling the input into view" by pushing the rest of the
-       app off-screen — there's nothing for it to scroll, so the keyboard
-       just resizes the app instead. */
+    /* Pin the app to the visible viewport. iOS scrolls the visual viewport
+       independently when the keyboard opens; --app-top mirrors
+       window.visualViewport.offsetTop so the fixed app tracks the visible
+       area instead of getting pushed off-screen. */
     position: fixed;
-    top: 0;
+    top: var(--app-top, 0);
     left: 0;
     width: 100%;
-    /* --app-h is set in JS to window.visualViewport.height so the layout
-       shrinks the moment the keyboard opens — 100dvh doesn't always update
-       in iOS Safari when the keyboard appears. */
+    /* --app-h is window.visualViewport.height — shrinks when the keyboard
+       slides up, so the message log absorbs the change via flex: 1. */
     height: var(--app-h, 100dvh);
     margin: 0;
     padding: 8px;

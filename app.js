@@ -452,8 +452,19 @@ sizeCanvas();
 // as --app-h. The mobile @media rule uses this var for the app shell's
 // height — when the keyboard slides up, the app shrinks to fit immediately.
 function updateAppHeight() {
-  const h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
-  document.documentElement.style.setProperty('--app-h', h + 'px');
+  const root = document.documentElement;
+  if (window.visualViewport) {
+    const vv = window.visualViewport;
+    root.style.setProperty('--app-h',   vv.height    + 'px');
+    // The visual viewport can be scrolled by iOS independently of the
+    // document (e.g. when the keyboard opens it shifts the visible area).
+    // We mirror its offsetTop so position:fixed elements track it instead
+    // of staying anchored to the now-off-screen layout viewport.
+    root.style.setProperty('--app-top', vv.offsetTop + 'px');
+  } else {
+    root.style.setProperty('--app-h',   window.innerHeight + 'px');
+    root.style.setProperty('--app-top', '0px');
+  }
 }
 updateAppHeight();
 if (window.visualViewport) {
