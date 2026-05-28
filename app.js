@@ -4,11 +4,17 @@
 // each stroke = { c: color, s: size, p: [[x,y], ...] } in CSS pixels.
 // massively lighter than PNGs, crisp at any size, serializes easily for P2P.
 
-// ESM imports (this script is loaded with type="module")
-// Nostr relays are real-time event streams — sub-second peer discovery and
-// fast reconnect after a tab refresh. Much smoother than BitTorrent
-// trackers (which only re-announce every 2 minutes).
-import { joinRoom } from 'https://esm.sh/@trystero-p2p/nostr';
+// ESM imports (this script is loaded with type="module").
+// Trystero (Nostr strategy) is VENDORED locally in ./vendor — no runtime CDN
+// dependency, so the app always loads even if a CDN is down/blocked, and
+// there's no third-party supply-chain surface. Nostr relays themselves are
+// real-time event streams: sub-second peer discovery and fast reconnect.
+import { joinRoom } from './vendor/trystero-nostr.js';
+
+// Debug logging is opt-in via ?debug — keeps the public IP, room key, and
+// other internals out of the console for everyone else (privacy hygiene).
+const DEBUG = new URLSearchParams(location.search).has('debug');
+const log = (...a) => { if (DEBUG) console.log('[comms]', ...a); };
 
 // ------- Config -------
 const COLORS = [
@@ -270,8 +276,11 @@ function appendMessage(name, text, drawing, fieldW, fieldH, isMe) {
   const bubble = document.createElement('div');
   bubble.className = 'message-bubble';
   // Lock every bubble to the input field's aspect ratio at send time.
-  // Long text grows the bubble taller; shorter content keeps the full height.
-  bubble.style.aspectRatio = `${fieldW} / ${fieldH}`;
+  // Clamp the height to at most the width: a hostile peer could otherwise
+  // send degenerate dims (e.g. 1×4096) that blow the bubble up to millions
+  // of pixels tall. Legit messages are ~480×90 (wide), so this never bites.
+  const safeH = Math.min(fieldH, fieldW);
+  bubble.style.aspectRatio = `${fieldW} / ${safeH}`;
 
   // Play button — persists across slideshow frame swaps so its handler stays bound.
   const playBtn = document.createElement('button');
@@ -400,7 +409,9 @@ function paintStrokes(canvasEl, drawing) {
     requestAnimationFrame(() => paintStrokes(canvasEl, drawing));
     return;
   }
-  const dispH = Math.round(dispW * (drawing.h / drawing.w));
+  // Cap height at the canvas width so a degenerate w/h ratio from a hostile
+  // peer can't allocate a monster canvas (e.g. 440×1.8M px → tab crash).
+  const dispH = Math.round(Math.min(dispW * (drawing.h / drawing.w), dispW));
   canvasEl.style.height = dispH + 'px';
   canvasEl.width  = dispW;
   canvasEl.height = dispH;
@@ -498,13 +509,20 @@ function getPublicIP() {
 
     pc.addEventListener('icecandidate', (e) => {
       if (done || !e.candidate) return;
-      const cand = e.candidate.candidate || '';
-      if (!cand.includes('srflx')) return; // only server-reflexive (public) candidates
-      const m = cand.match(/(\d+\.\d+\.\d+\.\d+)/);
-      if (!m) return;
+      const cand = e.candidate;
+      // Prefer the parsed fields; fall back to splitting the SDP candidate
+      // string (`candidate:foundation comp transport prio ADDR port typ TYPE`).
+      let type = cand.type;
+      let addr = cand.address;
+      if (!type || !addr) {
+        const parts = (cand.candidate || '').split(' ');
+        addr = parts[4];
+        type = parts[7];
+      }
+      if (type !== 'srflx' || !addr) return; // server-reflexive = public address
       done = true;
       pc.close();
-      resolve(m[1]);
+      resolve(addr); // IPv4 or IPv6 — normalized later by roomKeyInput()
     });
 
     setTimeout(() => {
@@ -516,11 +534,28 @@ function getPublicIP() {
   });
 }
 
-// SHA-256(ip + salt) → 32 hex chars. The salt isn't a real privacy boundary
-// (anyone with the source can hash known IPs), but it does prevent passive
-// observation of "this room hash = this exact public IP" without effort.
-async function hashRoomKey(ip) {
-  const buf = new TextEncoder().encode(ip + '.' + ROOM_SALT);
+// Turn a discovered public address into a room-grouping key.
+// - IPv4: use the address as-is. Everyone behind the NAT shares it.
+// - IPv6: there's usually no NAT — every device gets a unique global address
+//   but shares the LAN's /64 prefix. Group by that prefix so same-network
+//   IPv6 peers still land in the same room.
+function ipv6Prefix64(ip) {
+  ip = ip.split('%')[0];                   // strip any zone id (e.g. %en0)
+  const [head, tail = ''] = ip.split('::');
+  const h = head ? head.split(':') : [];
+  const t = tail ? tail.split(':') : [];
+  const fill = Array(Math.max(0, 8 - h.length - t.length)).fill('0');
+  return [...h, ...fill, ...t].slice(0, 4).map(x => (x || '0').padStart(4, '0')).join(':');
+}
+function roomKeyInput(ip) {
+  return ip.includes(':') ? 'v6:' + ipv6Prefix64(ip) : ip;
+}
+
+// SHA-256(keyInput + salt) → 32 hex chars. The salt isn't a real privacy
+// boundary (anyone with the source can hash known IPs), but it does prevent
+// passive observation of "this room hash = this exact public IP" without effort.
+async function hashRoomKey(keyInput) {
+  const buf = new TextEncoder().encode(keyInput + '.' + ROOM_SALT);
   const digest = await crypto.subtle.digest('SHA-256', buf);
   return Array.from(new Uint8Array(digest))
     .map(b => b.toString(16).padStart(2, '0'))
@@ -601,45 +636,42 @@ function sanitizeIncomingMessage(raw) {
 
 (async () => {
   try {
-    console.log('[comms] discovering public IP via STUN…');
+    log('discovering public IP via STUN…');
     const ip = await getPublicIP();
-    console.log('[comms] public IP:', ip);
+    log('public IP:', ip);
 
-    const roomKey = await hashRoomKey(ip);
-    console.log('[comms] room key:', roomKey);
+    const roomKey = await hashRoomKey(roomKeyInput(ip));
+    log('room key:', roomKey);
 
-    console.log('[comms] joining room…');
+    log('joining room…');
     const room = joinRoom({ appId: 'comms-pictochat' }, roomKey);
-    window._commsRoom = room; // exposed for debugging
+    if (DEBUG) window._commsRoom = room; // only exposed in debug mode
 
-    // Track connection state on the document root so the send button can
-    // visually distinguish "alone" (muted) from "has peers" (mint accent).
-    // No peer count exposed — just a binary "is anyone listening".
+    const peerRates = new Map();
+
+    // Connection state drives the send button color (muted vs mint). No peer
+    // count is exposed — just a binary "is anyone listening".
     function updateConnectionState() {
       const hasPeers = Object.keys(room.getPeers()).length > 0;
       document.documentElement.classList.toggle('has-peers', hasPeers);
     }
     updateConnectionState();
-    room.onPeerJoin((peerId) => {
-      console.log('[comms] peer joined:', peerId);
-      updateConnectionState();
-    });
+    room.onPeerJoin((peerId) => { log('peer joined:', peerId); updateConnectionState(); });
     room.onPeerLeave((peerId) => {
-      console.log('[comms] peer left:', peerId);
+      log('peer left:', peerId);
+      peerRates.delete(peerId);  // don't accumulate rate buckets for gone peers
       updateConnectionState();
     });
 
-    // Wire a typed action channel for messages. makeAction returns
-    // [send, receive]. We just use one channel for everything for now.
+    // Typed action channel for messages. makeAction returns [send, receive].
     const [sendMsg, onMsg] = room.makeAction('msg');
     broadcastMessage = sendMsg;
 
-    // Per-peer rate limiter — drops messages above 10/sec/peer to keep
-    // a hostile or runaway peer from flooding the room.
-    const peerRates = new Map();
+    // Per-peer rate limiter — drop messages above 10/sec/peer to keep a
+    // hostile or runaway peer from flooding the room.
     function rateOk(peerId) {
-      const now  = Date.now();
-      const arr  = (peerRates.get(peerId) || []).filter(t => now - t < 1000);
+      const now = Date.now();
+      const arr = (peerRates.get(peerId) || []).filter(t => now - t < 1000);
       arr.push(now);
       peerRates.set(peerId, arr);
       return arr.length <= 10;
@@ -652,7 +684,7 @@ function sanitizeIncomingMessage(raw) {
       appendMessage(data.name, data.text, data.drawing, data.fieldW, data.fieldH, false);
     });
 
-    console.log('[comms] joined room — waiting for peers');
+    log('joined room — waiting for peers');
   } catch (err) {
     console.error('[comms] networking failed:', err);
   }

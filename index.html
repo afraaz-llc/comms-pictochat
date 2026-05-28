@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>comms</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -44,10 +44,11 @@
 
   </main>
 
-  <script type="module" src="app.js?v=24"></script>
+  <script type="module" src="app.js?v=25"></script>
   <!--
-    NOTE: app.js is now an ES module (Trystero is ESM-only). The module is
-    fetched from esm.sh at runtime — first load needs internet.
+    app.js is an ES module. Trystero is vendored locally in ./vendor, so
+    the app loads with no runtime CDN dependency. Peer discovery still needs
+    internet (Nostr relays), but the UI always loads.
   -->
 
 </body>
