@@ -7,12 +7,21 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="styles.css?v=27">
+  <link rel="stylesheet" href="styles.css?v=28">
 </head>
 <body>
   <main class="comms-app">
 
-    <section class="message-log" id="messageLog"></section>
+    <section class="message-log" id="messageLog">
+      <!-- Empty-state hint. Pure CSS handles visibility: hidden once any
+           .message exists (:has), and the alone/together text swaps on the
+           .has-peers class. No presence count — just the same binary cue the
+           send button already gives. -->
+      <div class="empty-hint">
+        <span class="hint-alone">you're the first one here.<br>messages show up when someone else on the same WiFi opens comms too.</span>
+        <span class="hint-together">someone else is here — say something.</span>
+      </div>
+    </section>
 
     <section class="compose">
 
