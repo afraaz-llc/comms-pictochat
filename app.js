@@ -1,4 +1,4 @@
-// comms — pictochat prototype
+// comms — speakeasy
 //
 // drawings are stored as STROKE DATA (vector), not rasterized images.
 // each stroke = { c: color, s: size, p: [[x,y], ...] } in CSS pixels.
@@ -400,7 +400,7 @@ function playFollowups(startMsg) {
 
 // ------- Stroke rendering -------
 // Render onto a 1x backing store (no DPR upscaling) so the result is
-// naturally pixelated — matches the lightweight pictochat aesthetic and
+// naturally pixelated — matches the lightweight PictoChat aesthetic and
 // halves the bitmap memory on retina screens.
 function paintStrokes(canvasEl, drawing) {
   const rect = canvasEl.getBoundingClientRect();
@@ -492,7 +492,7 @@ sizeCanvas();
 // Trystero (which uses public BitTorrent trackers as a free signaling layer),
 // and then chats peer-to-peer over WebRTC DataChannels.
 
-const ROOM_SALT = 'comms-pictochat-v1';
+const ROOM_SALT = 'comms-speakeasy-v1';
 const STUN_URL  = 'stun:stun.l.google.com:19302';
 
 // Pull our public IP from a WebRTC server-reflexive ICE candidate. No
@@ -644,7 +644,7 @@ function sanitizeIncomingMessage(raw) {
     log('room key:', roomKey);
 
     log('joining room…');
-    const room = joinRoom({ appId: 'comms-pictochat' }, roomKey);
+    const room = joinRoom({ appId: 'comms-speakeasy' }, roomKey);
     if (DEBUG) window._commsRoom = room; // only exposed in debug mode
 
     const peerRates = new Map();

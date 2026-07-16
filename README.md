@@ -1,10 +1,12 @@
 <img src="favicon.svg" alt="comms logo — a swoosh circling a speech bubble" width="88">
 
-# comms-pictochat
+# comms-speakeasy
 
 A peer-to-peer drawing chat for everyone on the same WiFi.
 
-Open the page at the same coffee shop / library / friend's house as someone else, and you can chat with them — text, scribbles, or both at once — without an account, without a server, without anyone tracking what you're saying. PictoChat for the modern web.
+Like a speakeasy, you have to actually be there. Open the page at the same coffee shop / library / friend's house as someone else, and you can chat with them — text, scribbles, or both at once — without an account, without a server, without anyone tracking what you're saying. PictoChat for the modern web.
+
+**Live at [speakeasy.comms.fish](https://speakeasy.comms.fish)**
 
 This is a sub-project of the larger **[comms](https://comms.fish)** project — an open, ambient, privacy-first reimagining of casual chat.
 
